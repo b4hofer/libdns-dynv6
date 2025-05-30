@@ -39,7 +39,7 @@ func (p *Provider) AppendRecords(ctx context.Context, zone string, recs []libdns
 	}
 	results := []libdns.Record{}
 	for _, r := range recs {
-		dynv6Rec, err := fromLibdnsRecord(zone, &r)
+		dynv6Rec, err := fromLibdnsRecord(zone, r)
 		if err != nil {
 			return results, err
 		}
@@ -64,19 +64,20 @@ func (p *Provider) SetRecords(ctx context.Context, zone string, recs []libdns.Re
 	}
 	results := []libdns.Record{}
 	for _, r := range recs {
-		existingRecord := findRecord(existingRecords, &r)
+		rr := r.RR()
+		existingRecord := findRecord(existingRecords, r)
 		var result *record
 		if existingRecord != nil {
 			//record found, update it
 			updateRecord := *existingRecord
-			updateRecord.Data = r.Value
+			updateRecord.Data = rr.Data
 			result, err = p.updateRecord(ctx, zoneDetails.ID, &updateRecord)
 			if err != nil {
 				return results, err
 			}
 		} else {
 			//no record found, add a new one
-			newRecord, err := fromLibdnsRecord(zone, &r)
+			newRecord, err := fromLibdnsRecord(zone, r)
 			if err != nil {
 				return results, err
 			}
@@ -102,7 +103,7 @@ func (p *Provider) DeleteRecords(ctx context.Context, zone string, recs []libdns
 	}
 	results := []libdns.Record{}
 	for _, r := range recs {
-		existingRecord := findRecordWithValue(existingRecords, &r)
+		existingRecord := findRecordWithValue(existingRecords, r)
 		if existingRecord == nil {
 			return results, fmt.Errorf("Record not found: %+v", r)
 		}

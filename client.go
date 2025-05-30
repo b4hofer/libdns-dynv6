@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	urlutil "net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -166,46 +165,37 @@ type record struct {
 }
 
 func (r *record) toLibdnsRecord() libdns.Record {
-	return libdns.Record{
-		ID:    fmt.Sprint(r.ID),
-		Type:  r.Type,
-		Name:  r.Name,
-		Value: r.Data,
-		TTL:   60 * time.Second, //dynv6 does not allow for custom TTL values
+	return libdns.RR{
+		Type: r.Type,
+		Name: r.Name,
+		Data: r.Data,
+		TTL:  60 * time.Second, //dynv6 does not allow for custom TTL values
 	}
 }
 
-func fromLibdnsRecord(zone string, rec *libdns.Record) (*record, error) {
-	var (
-		id  int64
-		err error
-	)
-	if rec.ID != "" {
-		id, err = strconv.ParseInt(rec.ID, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-	}
+func fromLibdnsRecord(zone string, rec libdns.Record) (*record, error) {
+	rr := rec.RR()
 	return &record{
-		ID:   id,
-		Type: rec.Type,
-		Name: strings.TrimSuffix(rec.Name, "."+strings.TrimSuffix(zone, ".")),
-		Data: rec.Value,
+		Type: rr.Type,
+		Name: strings.TrimSuffix(rr.Name, "."+strings.TrimSuffix(zone, ".")),
+		Data: rr.Data,
 	}, nil
 }
 
-func findRecord(recs []record, r *libdns.Record) *record {
+func findRecord(recs []record, r libdns.Record) *record {
+	rr := r.RR()
 	for _, v := range recs {
-		if v.Type == r.Type && v.Name == r.Name {
+		if v.Type == rr.Type && v.Name == rr.Name {
 			return &v
 		}
 	}
 	return nil
 }
 
-func findRecordWithValue(recs []record, r *libdns.Record) *record {
+func findRecordWithValue(recs []record, r libdns.Record) *record {
+	rr := r.RR()
 	for _, v := range recs {
-		if v.Type == r.Type && v.Name == r.Name && v.Data == r.Value {
+		if v.Type == rr.Type && v.Name == rr.Name && v.Data == rr.Data {
 			return &v
 		}
 	}
